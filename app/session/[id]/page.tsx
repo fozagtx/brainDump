@@ -7,7 +7,7 @@ import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { ArrowLeft, RotateCcw, X } from 'lucide-react';
-import { supabase } from '@/lib/supabase';
+import { storage, Thought } from '@/lib/storage';
 
 type Question = {
   id: string;
@@ -64,7 +64,7 @@ export default function SessionPage() {
   const [currentStep, setCurrentStep] = useState(0);
   const [answers, setAnswers] = useState<Record<string, string>>({});
   const [currentThoughtIndex, setCurrentThoughtIndex] = useState(0);
-  const [thoughts, setThoughts] = useState<any[]>([]);
+  const [thoughts, setThoughts] = useState<Thought[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [audioSrc, setAudioSrc] = useState<string | null>(null);
   const audioRef = useRef<HTMLAudioElement>(null);
@@ -84,15 +84,9 @@ export default function SessionPage() {
     }
   }, [currentStep, isLoading]);
 
-  const loadThoughts = async () => {
+  const loadThoughts = () => {
     try {
-      const { data, error } = await supabase
-        .from('thoughts')
-        .select('*')
-        .eq('session_id', sessionId)
-        .order('created_at', { ascending: true });
-
-      if (error) throw error;
+      const data = storage.getThoughtsBySession(sessionId);
 
       if (!data || data.length === 0) {
         router.push(`/input/${sessionId}`);
@@ -148,7 +142,7 @@ export default function SessionPage() {
     }
   };
 
-  const completeCurrentThought = async () => {
+  const completeCurrentThought = () => {
     if (!currentThought) return;
 
     setIsLoading(true);
@@ -156,53 +150,18 @@ export default function SessionPage() {
     try {
       const intensity = parseInt(answers.intensity) || 5;
 
-      const { error: thoughtError } = await supabase
-        .from('thoughts')
-        .update({
-          can_change: answers['can-change'],
-          helps_or_hurts: answers['helps-hurts'],
-          primary_feeling: answers.feeling,
-          reflection: answers.reflection,
-          intensity,
-        })
-        .eq('id', currentThought.id);
+      const updatedThoughts = [...thoughts];
+      updatedThoughts[currentThoughtIndex] = {
+        ...currentThought,
+        category: answers['can-change'],
+        theme: answers['helps-hurts'],
+      };
+      setThoughts(updatedThoughts);
 
-      if (thoughtError) throw thoughtError;
-
-      const emotionsData: Record<string, number> = {};
-      if (answers.feeling) {
-        const feelings = answers.feeling.toLowerCase().split(',');
-        feelings.forEach((feeling) => {
-          const trimmed = feeling.trim();
-          if (trimmed) {
-            emotionsData[trimmed] = intensity;
-          }
-        });
-      }
-
-      const { data: sessionData } = await supabase
-        .from('sessions')
-        .select('emotions_data, average_intensity')
-        .eq('id', sessionId)
-        .maybeSingle();
-
-      const existingEmotions = sessionData?.emotions_data || {};
-      const mergedEmotions = { ...existingEmotions, ...emotionsData };
-
-      const allIntensities = thoughts
-        .map((t) => t.intensity)
-        .filter((i) => i !== null && i !== undefined);
-      allIntensities.push(intensity);
-
-      const avgIntensity = allIntensities.reduce((sum, i) => sum + i, 0) / allIntensities.length;
-
-      await supabase
-        .from('sessions')
-        .update({
-          average_intensity: avgIntensity,
-          emotions_data: mergedEmotions,
-        })
-        .eq('id', sessionId);
+      storage.updateThought(currentThought.id, {
+        category: answers['can-change'],
+        theme: answers['helps-hurts'],
+      });
 
       if (currentThoughtIndex < thoughts.length - 1) {
         setCurrentThoughtIndex(currentThoughtIndex + 1);
@@ -210,11 +169,7 @@ export default function SessionPage() {
         setAnswers({});
         setIsLoading(false);
       } else {
-        await supabase
-          .from('sessions')
-          .update({ completed_at: new Date().toISOString() })
-          .eq('id', sessionId);
-
+        storage.updateSession(sessionId, { completed_at: new Date().toISOString() });
         router.push(`/thoughts/${sessionId}`);
       }
     } catch (error) {

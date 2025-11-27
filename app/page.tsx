@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Brain, Cloud, CloudRain, CloudSnow, Sun } from 'lucide-react';
-import { supabase } from '@/lib/supabase';
+import { storage } from '@/lib/storage';
 import { useRouter } from 'next/navigation';
 
 const faqs = [
@@ -46,24 +46,19 @@ export default function Home() {
   const [selectedWeather, setSelectedWeather] = useState<string | null>(null);
   const [isStarting, setIsStarting] = useState(false);
 
-  const handleStartSession = async () => {
+  const handleStartSession = () => {
     if (!selectedWeather) return;
 
     setIsStarting(true);
 
     try {
-      const { data, error } = await supabase
-        .from('sessions')
-        .insert({
-          mind_weather: selectedWeather,
-          started_at: new Date().toISOString(),
-        })
-        .select()
-        .single();
+      const session = storage.createSession({
+        mind_weather: selectedWeather,
+        started_at: new Date().toISOString(),
+        thoughts_explored: 0,
+      });
 
-      if (error) throw error;
-
-      router.push(`/input/${data.id}`);
+      router.push(`/input/${session.id}`);
     } catch (error) {
       console.error('Error starting session:', error);
       setIsStarting(false);

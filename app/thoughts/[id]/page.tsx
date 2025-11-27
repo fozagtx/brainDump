@@ -5,7 +5,7 @@ import { useParams, useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { ArrowLeft, RotateCcw, X } from 'lucide-react';
-import { supabase, Session, Thought } from '@/lib/supabase';
+import { storage, Session, Thought } from '@/lib/storage';
 
 const categoryColors: Record<string, string> = {
   worry: 'bg-blue-400',
@@ -39,22 +39,10 @@ export default function ThoughtsPage() {
 
   const loadSessionData = async () => {
     try {
-      const { data: sessionData, error: sessionError } = await supabase
-        .from('sessions')
-        .select('*')
-        .eq('id', sessionId)
-        .maybeSingle();
-
-      if (sessionError) throw sessionError;
+      const sessionData = storage.getSession(sessionId);
       setSession(sessionData);
 
-      const { data: thoughtsData, error: thoughtsError } = await supabase
-        .from('thoughts')
-        .select('*')
-        .eq('session_id', sessionId)
-        .order('created_at', { ascending: true });
-
-      if (thoughtsError) throw thoughtsError;
+      const thoughtsData = storage.getThoughtsBySession(sessionId);
 
       if (thoughtsData && thoughtsData.length > 0) {
         if (!thoughtsData[0].category) {
@@ -81,32 +69,23 @@ export default function ThoughtsPage() {
       if (response.ok) {
         const { categorized, overallReflection } = await response.json();
 
-        const updatedThoughts = await Promise.all(
-          thoughtsData.map(async (thought, index) => {
-            const cat = categorized[index];
-            const colors = ['bg-blue-400', 'bg-orange-400', 'bg-pink-400', 'bg-purple-400', 'bg-gray-400'];
-            const color = colors[index % colors.length];
+        const updatedThoughts = thoughtsData.map((thought, index) => {
+          const cat = categorized[index];
+          const updatedThought = {
+            ...thought,
+            category: cat?.category || 'other',
+            theme: cat?.theme || 'other',
+          };
 
-            const { data, error } = await supabase
-              .from('thoughts')
-              .update({
-                category: cat?.category || 'other',
-                theme: cat?.theme || 'other',
-                color: color,
-              })
-              .eq('id', thought.id)
-              .select()
-              .single();
+          storage.updateThought(thought.id, {
+            category: cat?.category || 'other',
+            theme: cat?.theme || 'other',
+          });
 
-            if (error) throw error;
-            return data;
-          })
-        );
+          return updatedThought;
+        });
 
-        await supabase
-          .from('sessions')
-          .update({ overall_reflection: overallReflection })
-          .eq('id', sessionId);
+        storage.updateSession(sessionId, { overall_reflection: overallReflection });
 
         setSession((prev) => prev ? { ...prev, overall_reflection: overallReflection } : null);
         setThoughts(updatedThoughts);
@@ -125,8 +104,7 @@ export default function ThoughtsPage() {
     ? thoughts
     : thoughts.filter((t) => t.category === selectedCategory);
 
-  const emotionEntries = session?.emotions_data ? Object.entries(session.emotions_data) : [];
-  const topEmotions = emotionEntries.sort((a, b) => (b[1] as number) - (a[1] as number)).slice(0, 3);
+  const topEmotions: [string, number][] = [];
 
   const thoughtsByTheme: Record<string, Thought[]> = {};
   filteredThoughts.forEach((thought) => {
@@ -252,7 +230,7 @@ export default function ThoughtsPage() {
                       const position = themePositions[thought.theme || 'other'] || { x: 50, y: 50 };
                       const offset = index * 10;
                       const colors = ['bg-blue-400', 'bg-orange-400', 'bg-pink-400', 'bg-purple-400'];
-                      const bgColor = thought.color || colors[index % colors.length];
+                      const bgColor = colors[index % colors.length];
 
                       return (
                         <button

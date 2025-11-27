@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Textarea } from '@/components/ui/textarea';
 import { Plus, Trash2, Mic, MicOff } from 'lucide-react';
-import { supabase } from '@/lib/supabase';
+import { storage } from '@/lib/storage';
 
 export default function InputPage() {
   const params = useParams();
@@ -148,7 +148,7 @@ export default function InputPage() {
     return { text: 'Loud', color: 'text-blue-400' };
   };
 
-  const handleContinue = async () => {
+  const handleContinue = () => {
     const validThoughts = thoughts.filter((t) => t.trim().length > 0);
 
     if (validThoughts.length === 0) return;
@@ -161,14 +161,8 @@ export default function InputPage() {
         thought_text: thought.trim(),
       }));
 
-      const { error } = await supabase.from('thoughts').insert(thoughtsToInsert);
-
-      if (error) throw error;
-
-      await supabase
-        .from('sessions')
-        .update({ thoughts_explored: validThoughts.length })
-        .eq('id', sessionId);
+      storage.createThoughts(thoughtsToInsert);
+      storage.updateSession(sessionId, { thoughts_explored: validThoughts.length });
 
       router.push(`/thoughts/${sessionId}`);
     } catch (error) {

@@ -5,7 +5,7 @@ import { useParams, useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Sparkles, Zap } from 'lucide-react';
-import { supabase, Session, Thought } from '@/lib/supabase';
+import { storage, Session, Thought } from '@/lib/storage';
 
 export default function CompletePage() {
   const params = useParams();
@@ -23,22 +23,11 @@ export default function CompletePage() {
 
   const loadSessionData = async () => {
     try {
-      const { data: sessionData, error: sessionError } = await supabase
-        .from('sessions')
-        .select('*')
-        .eq('id', sessionId)
-        .maybeSingle();
-
-      if (sessionError) throw sessionError;
+      const sessionData = storage.getSession(sessionId);
       setSession(sessionData);
 
-      const { data: thoughtData, error: thoughtError } = await supabase
-        .from('thoughts')
-        .select('*')
-        .eq('session_id', sessionId)
-        .maybeSingle();
-
-      if (thoughtError) throw thoughtError;
+      const thoughts = storage.getThoughtsBySession(sessionId);
+      const thoughtData = thoughts.length > 0 ? thoughts[0] : null;
       setThought(thoughtData);
 
       if (thoughtData) {
@@ -58,8 +47,8 @@ export default function CompletePage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           thoughtText: thoughtData.thought_text,
-          feeling: thoughtData.primary_feeling,
-          reflection: thoughtData.reflection,
+          category: thoughtData.category,
+          theme: thoughtData.theme,
         }),
       });
 
@@ -93,8 +82,7 @@ export default function CompletePage() {
     );
   }
 
-  const emotionEntries = session?.emotions_data ? Object.entries(session.emotions_data) : [];
-  const topEmotion = emotionEntries.sort((a, b) => (b[1] as number) - (a[1] as number))[0];
+  const emotionEntries: [string, number][] = [];
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-blue-900 to-slate-900 text-white">
@@ -119,10 +107,6 @@ export default function CompletePage() {
               <div>
                 <p className="text-slate-400 text-sm mb-1">Thoughts explored</p>
                 <p className="text-3xl font-bold text-white">{session?.thoughts_explored || 0}</p>
-              </div>
-              <div>
-                <p className="text-slate-400 text-sm mb-1">Average intensity</p>
-                <p className="text-3xl font-bold text-white">{session?.average_intensity || 0}/10</p>
               </div>
             </div>
 
