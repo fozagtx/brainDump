@@ -20,45 +20,6 @@ The application helps you understand patterns in your thinking, identify emotion
 
 ---
 
-## 🎯 Use Cases
-
-### **1. Overwhelmed by Racing Thoughts**
-When your mind feels like it's spinning with too many thoughts at once, Brain Dump helps you:
-- Capture thoughts quickly without losing them
-- Organize scattered thinking into clear categories
-- See patterns you might have missed
-- Gain distance and perspective
-
-### **2. Late-Night Anxiety**
-When worries keep you awake at 3 AM:
-- Use voice input to express thoughts without screens
-- Guided reflection helps process what's bothering you
-- Visualize whether thoughts are actionable or need acceptance
-- Get compassionate AI insights to ease your mind
-
-### **3. Decision-Making Clarity**
-When you're stuck on a difficult decision:
-- Dump all perspectives without judgment
-- See which thoughts help vs. hurt
-- Identify underlying emotions driving the decision
-- Understand what feels most true to you
-
-### **4. Emotional Check-ins**
-For regular mental wellness maintenance:
-- Track your "mind weather" over time
-- Notice emotional patterns and triggers
-- Practice structured self-reflection
-- Build awareness of your mental state
-
-### **5. Processing Difficult Conversations**
-After a challenging interaction:
-- Voice-record your immediate feelings
-- Explore whether thoughts are rumination or actionable
-- Identify core emotions and themes
-- Gain clarity before responding
-
----
-
 ## 🏗️ How It Was Built
 
 ### **Tech Stack**
@@ -141,15 +102,6 @@ graph TB
     style End fill:#e1f5e1
 ```
 
-### **Key Design Decisions**
-
-1. **Client-Side Storage** - Uses localStorage for privacy and instant access (no server latency)
-2. **Sequential Reflection** - One thought at a time prevents overwhelm
-3. **AI-Powered Categorization** - GPT-4 provides nuanced understanding beyond keyword matching
-4. **Voice-First Design** - Natural expression when typing feels too effortful
-5. **Compassionate Language** - All prompts and insights use gentle, non-judgmental language
-6. **Visual Feedback** - Real-time audio levels and bubble visualization make progress tangible
-
 ---
 
 ## 🚀 How to Use It
@@ -192,42 +144,6 @@ graph TB
 
    Navigate to [http://localhost:3000](http://localhost:3000)
 
-### **Usage Guide**
-
-#### **Step 1: Set Your Mind Weather**
-Choose how your mind feels right now:
-- ☀️ **Sunny** - Clear and calm
-- ⛅ **Cloudy** - Somewhat unclear
-- ⛈️ **Stormy** - Intense and chaotic
-- 🌫️ **Foggy** - Confused or numb
-
-#### **Step 2: Dump Your Thoughts**
-- **Type** your thoughts in the text area, or
-- **Click the microphone** to record your voice (auto-transcribes)
-- Add as many thoughts as you want
-- Click **"Continue"** when ready
-
-#### **Step 3: Guided Reflection**
-For each thought, answer 5 questions:
-1. Can this be changed or must it be accepted?
-2. Does this help or hurt you?
-3. What feeling shows up most strongly?
-4. What part of this feels most true?
-5. How intense is this feeling? (1-10 scale)
-
-The app will read questions aloud—just listen and respond.
-
-#### **Step 4: Visualize & Explore**
-- See all your thoughts as **interactive bubbles**
-- Filter by emotion category
-- View **top emotions** and themes
-- Read your personalized **AI reflection**
-
-#### **Step 5: Complete Session**
-- Review your session summary
-- Reflect on the insights gained
-- Start a new session anytime
-
 ---
 
 ## 📁 Project Structure
@@ -267,18 +183,6 @@ brainDump/
 
 ---
 
-## 🤝 Contributing
-
-Contributions are welcome! Please feel free to submit a Pull Request.
-
-1. Fork the repository
-2. Create your feature branch (`git checkout -b feature/AmazingFeature`)
-3. Commit your changes (`git commit -m 'Add some AmazingFeature'`)
-4. Push to the branch (`git push origin feature/AmazingFeature`)
-5. Open a Pull Request
-
----
-
 ## 📄 License
 
 This project is open source and available under the MIT License.
@@ -294,14 +198,3 @@ This project is open source and available under the MIT License.
 - **International**: [Find your local crisis line](https://findahelpline.com/)
 
 ---
-
-## 🙏 Acknowledgments
-
-- **OpenAI** - GPT-4 and Whisper API
-- **ElevenLabs** - Natural voice synthesis
-- **Radix UI** - Accessible component primitives
-- **Vercel** - Next.js framework and hosting
-
----
-
-Made with ❤️ for anyone who needs a moment to breathe

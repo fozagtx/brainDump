@@ -154,7 +154,7 @@ export default function Home() {
             <iframe
               width="100%"
               height="100%"
-              src="https://www.youtube.com/embed/1g5LIfVQANM?autoplay=1"
+              src="https://www.youtube.com/embed/1g5LIfVQANM"
               title="Brain Dump Demo"
               allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
               allowFullScreen
