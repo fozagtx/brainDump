@@ -7,6 +7,19 @@ const openai = new OpenAI({
 
 export async function POST(request: NextRequest) {
   try {
+    // Check if OpenAI API key is configured
+    if (!process.env.OPENAI_API_KEY || process.env.OPENAI_API_KEY === 'your_openai_api_key_here') {
+      console.error('OpenAI API key not configured');
+      return NextResponse.json(
+        { 
+          error: 'OpenAI API key not configured',
+          categorized: [],
+          overallReflection: 'AI categorization is not available at the moment. Your thoughts have been saved and can still be explored.'
+        }, 
+        { status: 500 }
+      );
+    }
+
     const { thoughts } = await request.json();
 
     if (!thoughts || !Array.isArray(thoughts)) {
