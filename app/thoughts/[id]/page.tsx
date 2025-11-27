@@ -65,12 +65,29 @@ export default function ThoughtsPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ thoughts: thoughtsData }),
       });
-
+      
       if (response.ok) {
-        const { categorized, overallReflection } = await response.json();
+        const { categorized, overallReflection, error } = await response.json();
+
+        // Handle case where API returns error but with fallback data
+        if (error && categorized.length === 0) {
+          const fallbackThoughts = thoughtsData.map((thought) => ({
+            ...thought,
+            category: 'other',
+            theme: 'other',
+          }));
+          setThoughts(fallbackThoughts);
+          
+          if (overallReflection) {
+            storage.updateSession(sessionId, { overall_reflection: overallReflection });
+            setSession((prev) => prev ? { ...prev, overall_reflection: overallReflection } : null);
+          }
+          return;
+        }
 
         const updatedThoughts = thoughtsData.map((thought, index) => {
-          const cat = categorized[index];
+          // Find the corresponding category data by index
+          const cat = categorized.find((c: any) => c.index === index);
           const updatedThought = {
             ...thought,
             category: cat?.category || 'other',
@@ -89,9 +106,25 @@ export default function ThoughtsPage() {
 
         setSession((prev) => prev ? { ...prev, overall_reflection: overallReflection } : null);
         setThoughts(updatedThoughts);
+      } else {
+        console.error('Categorization failed with status:', response.status);
+        // If categorization fails, still display thoughts with default categories
+        const fallbackThoughts = thoughtsData.map((thought) => ({
+          ...thought,
+          category: 'other',
+          theme: 'other',
+        }));
+        setThoughts(fallbackThoughts);
       }
     } catch (error) {
       console.error('Error categorizing thoughts:', error);
+      // If categorization fails, still display thoughts with default categories
+      const fallbackThoughts = thoughtsData.map((thought) => ({
+        ...thought,
+        category: 'other',
+        theme: 'other',
+      }));
+      setThoughts(fallbackThoughts);
     }
   };
 
@@ -104,7 +137,17 @@ export default function ThoughtsPage() {
     ? thoughts
     : thoughts.filter((t) => t.category === selectedCategory);
 
-  const topEmotions: [string, number][] = [];
+  // Calculate top emotions based on categories
+  const emotionCounts: Record<string, number> = {};
+  thoughts.forEach((thought) => {
+    const category = thought.category || 'other';
+    emotionCounts[category] = (emotionCounts[category] || 0) + 1;
+  });
+
+  const topEmotions: [string, number][] = Object.entries(emotionCounts)
+    .map(([emotion, count]) => [emotion, Math.min(10, Math.round((count / Math.max(thoughts.length, 1)) * 10))] as [string, number])
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 3);
 
   const thoughtsByTheme: Record<string, Thought[]> = {};
   filteredThoughts.forEach((thought) => {
@@ -229,8 +272,7 @@ export default function ThoughtsPage() {
                     {filteredThoughts.map((thought, index) => {
                       const position = themePositions[thought.theme || 'other'] || { x: 50, y: 50 };
                       const offset = index * 10;
-                      const colors = ['bg-blue-400', 'bg-orange-400', 'bg-pink-400', 'bg-purple-400'];
-                      const bgColor = colors[index % colors.length];
+                      const bgColor = categoryColors[thought.category || 'other'] || 'bg-gray-400';
 
                       return (
                         <button
@@ -243,7 +285,11 @@ export default function ThoughtsPage() {
                           }}
                           className={`${bgColor} rounded-full p-6 shadow-lg hover:scale-110 transition-transform cursor-pointer max-w-[140px]`}
                         >
-                          <p className="text-white text-xs font-medium line-clamp-3">
+                          <p className="text-white text-xs font-medium overflow-hidden" style={{ 
+                            display: '-webkit-box',
+                            WebkitLineClamp: 3,
+                            WebkitBoxOrient: 'vertical'
+                          }}>
                             {thought.thought_text}
                           </p>
                         </button>
