@@ -244,7 +244,7 @@ export default function InputPage() {
       storage.createThoughts(thoughtsToInsert);
       storage.updateSession(sessionId, { thoughts_explored: validThoughts.length });
 
-      router.push(`/thoughts/${sessionId}`);
+      router.push(`/session/${sessionId}`);
     } catch (error) {
       console.error('Error saving thoughts:', error);
       setIsSaving(false);
