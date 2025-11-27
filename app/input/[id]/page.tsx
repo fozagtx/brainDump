@@ -16,6 +16,7 @@ export default function InputPage() {
   const [recordingIndex, setRecordingIndex] = useState<number | null>(null);
   const [audioLevel, setAudioLevel] = useState(0);
   const [isTranscribing, setIsTranscribing] = useState(false);
+  const [splitNotification, setSplitNotification] = useState<string | null>(null);
 
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
@@ -116,6 +117,64 @@ export default function InputPage() {
     }
   };
 
+  const splitIntoThoughts = (text: string): string[] => {
+    // First, split by sentence endings (. ! ?)
+    const sentences = text.split(/[.!?]+/).filter(s => s.trim().length > 0);
+    
+    // If we have multiple meaningful sentences, return them as separate thoughts
+    if (sentences.length > 1) {
+      return sentences.map(s => s.trim()).filter(s => s.length > 5);
+    }
+    
+    // For single long text without clear sentence breaks, try other separators
+    // but only if the text is quite long (suggesting multiple thoughts)
+    if (text.length < 30) {
+      return text.trim().length > 5 ? [text.trim()] : [];
+    }
+    
+    const separators = [
+      { pattern: /\s+and\s+/gi, text: 'and' },
+      { pattern: /\s+but\s+/gi, text: 'but' },
+      { pattern: /\s+so\s+/gi, text: 'so' },
+      { pattern: /\s+because\s+/gi, text: 'because' },
+      { pattern: /\s+also\s+/gi, text: 'also' }
+    ];
+    
+    let parts = [text.trim()];
+    
+    for (const { pattern, text: separatorText } of separators) {
+      const newParts: string[] = [];
+      let shouldSplit = false;
+      
+      parts.forEach(part => {
+        const splitParts = part.split(pattern);
+        if (splitParts.length > 1) {
+          shouldSplit = true;
+          splitParts.forEach((splitPart, index) => {
+            if (splitPart.trim()) {
+              if (index > 0) {
+                newParts.push(separatorText + ' ' + splitPart.trim());
+              } else {
+                newParts.push(splitPart.trim());
+              }
+            }
+          });
+        } else {
+          newParts.push(part);
+        }
+      });
+      
+      // Only use the split if it creates meaningful parts and all parts are long enough
+      if (shouldSplit && newParts.length > parts.length && newParts.every(p => p.trim().length > 5)) {
+        parts = newParts;
+        break; // Use the first successful split
+      }
+    }
+    
+    // Filter out very short parts and ensure meaningful thoughts
+    return parts.filter(p => p.trim().length > 5);
+  };
+
   const transcribeAudio = async (audioBlob: Blob, index: number) => {
     setIsTranscribing(true);
     try {
@@ -130,9 +189,30 @@ export default function InputPage() {
       if (!response.ok) throw new Error('Transcription failed');
 
       const { text } = await response.json();
-      const newThoughts = [...thoughts];
-      newThoughts[index] = (newThoughts[index] + ' ' + text).trim();
-      setThoughts(newThoughts);
+      
+      // Split the transcribed text into separate thoughts
+      const splitThoughts = splitIntoThoughts(text);
+      
+      if (splitThoughts.length > 1) {
+        // If we have multiple thoughts, add them to the thoughts array
+        const newThoughts = [...thoughts];
+        // Replace current thought with first split thought
+        newThoughts[index] = (newThoughts[index] + ' ' + splitThoughts[0]).trim();
+        // Add remaining split thoughts as new entries
+        for (let i = 1; i < splitThoughts.length; i++) {
+          newThoughts.push(splitThoughts[i]);
+        }
+        setThoughts(newThoughts);
+        
+        // Show notification about the split
+        setSplitNotification(`Your voice input was split into ${splitThoughts.length} separate thoughts`);
+        setTimeout(() => setSplitNotification(null), 3000);
+      } else {
+        // Single thought, just append to current
+        const newThoughts = [...thoughts];
+        newThoughts[index] = (newThoughts[index] + ' ' + text).trim();
+        setThoughts(newThoughts);
+      }
     } catch (error) {
       console.error('Error transcribing audio:', error);
       alert('Failed to transcribe audio. Please try again.');
@@ -182,6 +262,12 @@ export default function InputPage() {
             <p className="text-xl text-slate-300">
               Share the thoughts that have been weighing on you. Add as many as you need.
             </p>
+            
+            {splitNotification && (
+              <div className="bg-green-500/20 border border-green-500/50 rounded-lg p-3 mx-auto max-w-md">
+                <p className="text-green-300 text-sm">{splitNotification}</p>
+              </div>
+            )}
           </div>
 
           <Card className="bg-slate-800/50 backdrop-blur border-slate-700 p-8 space-y-6">
